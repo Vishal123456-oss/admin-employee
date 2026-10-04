@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Employee Attendance System</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f2f5f9;color:#172033}
+.header{background:#172033;color:#fff;text-align:center;padding:18px 15px}
+.logo{font-size:24px;font-weight:bold}
+.header p{margin:5px 0;color:#c7ced9;font-size:13px}
+.headerInfo{margin-top:8px;font-size:12px;color:#aeb8c8}
+.loginScreen{min-height:calc(100vh - 100px);display:flex;align-items:center;justify-content:center;padding:20px}
+.loginBox{background:#fff;width:100%;max-width:420px;padding:30px;border-radius:18px;box-shadow:0 8px 30px #0002}
+.loginBox h2{text-align:center;margin-top:0}
+input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #d7dce5;border-radius:9px;font-size:15px;background:#fff}
+button{border:0;border-radius:9px;padding:11px 15px;font-weight:bold;cursor:pointer}
+button:active{transform:scale(.98)}
+.primary{width:100%;background:#1565c0;color:#fff;margin-top:10px}
+.dashboard{display:none;max-width:1250px;margin:auto;padding:20px}
+.topBar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.topBar h2{margin:0}
+.logout{background:#e53935;color:#fff}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px}
+.adminStats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px}
+.card,.panel{background:#fff;padding:20px;border-radius:15px;box-shadow:0 5px 20px #0001;margin-bottom:20px}
+.cardTitle{color:#687386;font-size:14px}
+.cardValue{font-size:27px;font-weight:bold;margin-top:8px;word-break:break-word}
+.employeeInfo{background:#f4f7fb;padding:15px;border-radius:10px;margin-bottom:15px}
+.small{font-size:13px;color:#687386}
+.formGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+label{font-size:13px;font-weight:bold;color:#4c5668}
+.attendanceBtn{width:100%;background:#00a152;color:#fff;font-size:17px;margin-top:10px}
+.adminMarkBtn{background:#1565c0;color:#fff;margin-top:10px}
+.approveBtn{background:#00a152;color:#fff;margin-right:5px;margin-bottom:5px}
+.rejectBtn{background:#e53935;color:#fff;margin-right:5px;margin-bottom:5px}
+.removeBtn{background:#7b1fa2;color:#fff;margin-bottom:5px}
+.activateBtn{background:#00897b;color:#fff;margin-bottom:5px}
+.manageBtn{background:#455a64;color:#fff;margin-bottom:5px}
+.pdfBtn{background:#5e35b1;color:#fff;margin-bottom:5px}
+.pdfPrimary{background:#5e35b1;color:#fff;margin-top:10px}
+.pdfSecondary{background:#37474f;color:#fff;margin-top:10px}
+.adminMenu{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}.adminMenu button{background:#455a64;color:#fff}.adminMenu button.active{background:#1565c0}.adminSection{display:none}.adminSection.active{display:block}.sectionTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}.closeBtn{background:#e53935;color:#fff}.monthBar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:15px}.holidayBadge{background:#ede9fe;color:#5b21b6}.sundayBadge{background:#e0f2fe;color:#0369a1}@media(max-width:700px){.sectionTop{flex-direction:column;align-items:stretch}.monthBar{grid-template-columns:1fr}}@media(max-width:700px){.adminMenu{grid-template-columns:1fr}}
+.pdfTools{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.pdfTools label{display:block;margin-bottom:4px}
+@media(max-width:700px){.pdfTools{grid-template-columns:1fr}}
+.tableWrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:850px}
+th,td{padding:11px;border-bottom:1px solid #e5e8ed;text-align:left}
+th{background:#f3f6fa;white-space:nowrap}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;font-size:12px;font-weight:bold}
+.pending{background:#fff3cd;color:#856404}
+.approved{background:#d4edda;color:#155724}
+.rejected{background:#f8d7da;color:#721c24}
+.fullBadge{background:#dbeafe;color:#1e40af}
+.halfBadge{background:#fef3c7;color:#92400e}
+.message{display:none;padding:12px;margin-top:12px;border-radius:9px;text-align:center;font-size:14px}
+.success{background:#d4edda;color:#155724}
+.error{background:#f8d7da;color:#721c24}
+.footer{text-align:center;padding:20px;color:#687386;font-size:12px}
+@media(max-width:700px){
+.cards,.adminStats,.formGrid{grid-template-columns:1fr}
+.topBar{flex-direction:column;gap:10px;align-items:stretch}
+.topBar h2{text-align:center}
+.logout{width:100%}
+.dashboard{padding:12px}
+.card,.panel{padding:15px}
+.logo{font-size:20px}
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+  import {
+    getFirestore, collection, getDocs, getDoc, setDoc, query, where, addDoc,
+    updateDoc, deleteDoc, doc, serverTimestamp, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBAI8sCtxQhlu7AWPL0I2P3SDfpftOCmEE",
+    authDomain: "employeelogin-a10cb.firebaseapp.com",
+    projectId: "employeelogin-a10cb",
+    storageBucket: "employeelogin-a10cb.firebasestorage.app",
+    messagingSenderId: "324749669563",
+    appId: "1:324749669563:web:9731c1498922e79a22659e",
+    measurementId: "G-XGTJ6F0GXH"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const creatorApp = initializeApp(firebaseConfig, "employeeCreator");
+  const creatorAuth = getAuth(creatorApp);
+
+  window.firebaseAuth = auth;
+  window.firebaseDB = db;
+  window.firebaseFns = {
+    signInWithEmailAndPassword,
+    signOut,
+    createUserWithEmailAndPassword,
+    sendPasswordResetEmail,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword,
+    creatorAuth,
+    collection,
+    getDocs,
+    getDoc,
+    setDoc,
+    query,
+    where,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+    serverTimestamp,
+    onSnapshot
+  };
+</script>
+
+</head>
+<body>
+
+<div class="header">
+<div class="logo">📋 Employee Attendance System</div>
+<p>Employee Attendance & Admin Approval</p>
+<div class="headerInfo">
+<span id="siteDateTime">Loading...</span> | Visitors: <span id="visitorCount">0</span>
+</div>
+</div>
+
+<div id="loginScreen" class="loginScreen">
+<div class="loginBox">
+<h2>🔐 Login</h2>
+<p>Select login type</p>
+
+<select id="loginType">
+<option value="employee">Employee Login</option>
+<option value="admin">Admin Login</option>
+</select>
+
+<div id="employeeLogin">
+<input id="employeeId" placeholder="Employee ID e.g. EMP001" autocomplete="off">
+<input id="employeePassword" type="password" placeholder="Employee Password">
+</div>
+
+<div id="adminLogin" style="display:none">
+<input id="adminUsername" placeholder="Admin Username" autocomplete="off">
+<input id="adminPassword" type="password" placeholder="Admin Password">
+</div>
+
+<button id="loginBtn" class="primary" type="button">LOGIN</button>
+<div id="loginMessage" class="message"></div>
+</div>
+</div>
+
+<div id="employeeDashboard" class="dashboard">
+<div class="topBar">
+<h2>👤 Employee Dashboard</h2>
+<button class="logout" id="employeeLogout" type="button">LOGOUT</button>
+</div>
+
+<div class="cards">
+<div class="card"><div class="cardTitle">Employee ID</div><div id="empIdDisplay" class="cardValue">-</div></div>
+<div class="card"><div class="cardTitle">Per Day Wage</div><div id="empDailyWage" class="cardValue">₹0</div></div>
+<div class="card"><div class="cardTitle">Monthly Wage</div><div id="empMonthlyWage" class="cardValue">₹0</div></div>
+</div>
+
+<div class="cards">
+<div class="card"><div class="cardTitle">Full Days</div><div id="fullDays" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">Half Days</div><div id="halfDays" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">Pending</div><div id="pendingDays" class="cardValue">0</div></div>
+</div>
+
+<div class="cards">
+<div class="card"><div class="cardTitle">OT Hours</div><div id="empOTHours" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">OT Wage</div><div id="empOTWage" class="cardValue">₹0</div></div>
+<div class="card"><div class="cardTitle">Employee</div><div id="employeeNameDisplay" class="cardValue" style="font-size:20px">-</div></div>
+</div>
+
+<div class="panel">
+<h3>📝 Today's Attendance</h3>
+<div class="employeeInfo">
+<b id="employeeWelcome">Employee</b><br>
+<span id="currentDateTime">-</span><br><span id="employeeDayNotice" class="small"></span><br><br>
+<span class="small">OT Rate = Per Day Wage ÷ 8</span>
+</div>
+
+<div class="formGrid">
+<div>
+<label>Attendance Type</label>
+<select id="employeeAttendanceType">
+<option value="P">Full Day (P)</option>
+<option value="H">Half Day (H)</option>
+</select>
+</div>
+<div>
+<label>OT Hours</label>
+<input id="employeeOTHours" type="number" min="0" step="0.5" value="0" placeholder="OT Hours">
+</div>
+<div>
+<label>Today's Wage Preview</label>
+<input id="employeeWagePreview" readonly value="₹0">
+</div>
+</div>
+
+<button id="markAttendanceBtn" class="attendanceBtn" type="button">✅ SUBMIT ATTENDANCE</button>
+<div id="employeeMessage" class="message"></div>
+</div>
+
+<div class="panel">
+<h3>📊 My Attendance History</h3>
+<div class="tableWrap">
+<table>
+<thead><tr><th>Date</th><th>Time</th><th>Type</th><th>OT Hours</th><th>OT Wage</th><th>Marked By</th><th>Status</th></tr></thead>
+<tbody id="employeeHistory"></tbody>
+</table>
+</div>
+</div>
+
+<div class="panel">
+<h3>📄 Salary PDF</h3>
+<p class="small">Select a month to download your professional salary report with day-wise attendance, OT and monthly wage.</p>
+<div class="pdfTools">
+<div><label>Month</label><input id="employeePdfMonth" type="month"></div>
+<div></div>
+<button id="employeePdfBtn" class="pdfPrimary" type="button">DOWNLOAD SALARY PDF</button>
+</div>
+</div>
+
+<div class="footer">Last Updated: <span id="employeeLastUpdated">-</span></div>
+</div>
+
+<div id="adminDashboard" class="dashboard">
+<div class="topBar">
+<h2>🛠️ Admin Dashboard</h2>
+<button class="logout" id="adminLogout" type="button">LOGOUT</button>
+</div>
+
+<div class="adminStats">
+<div class="card"><div class="cardTitle">Total Records</div><div id="totalRequests" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">Pending</div><div id="totalPending" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">Approved</div><div id="totalApproved" class="cardValue">0</div></div>
+<div class="card"><div class="cardTitle">Rejected</div><div id="totalRejected" class="cardValue">0</div></div>
+</div>
+
+<div class="adminMenu">
+<button type="button" id="viewAttendanceBtn">📋 VIEW ATTENDANCE</button>
+<button type="button" id="viewSalaryBtn">💰 VIEW EMPLOYEE SALARY SUMMARY</button>
+<button type="button" id="adminSettingsBtn">🔐 ADMIN ACCOUNT SETTINGS</button>
+<button type="button" id="holidayBtn">🎉 SUNDAY / HOLIDAY</button>
+</div>
+
+<div class="panel">
+<h3>👥 Employee Management</h3>
+<p class="small">Add new employees or deactivate/reactivate an employee. Login accounts are created in Firebase Authentication automatically.</p>
+<div class="formGrid">
+<div><label>Employee ID</label><input id="newEmpId" placeholder="EMP017"></div>
+<div><label>Name</label><input id="newEmpName" placeholder="Employee Name"></div>
+<div><label>Per Day Wage</label><input id="newEmpWage" type="number" min="0" step="1" placeholder="500"></div>
+</div>
+<label>Login Password</label>
+<input id="newEmpPassword" type="password" placeholder="Minimum 6 characters">
+<button id="addEmployeeBtn" class="adminMarkBtn" type="button">ADD EMPLOYEE</button>
+<div id="employeeManageMessage" class="message"></div>
+<div class="tableWrap" style="margin-top:15px">
+<table>
+<thead><tr><th>ID</th><th>Name</th><th>Wage</th><th>Email</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="employeeManagementTable"></tbody>
+</table>
+</div>
+</div>
+
+<div class="panel">
+<h3>➕ Admin Mark Attendance</h3>
+<p class="small">Admin can mark attendance when an employee has not marked attendance.</p>
+
+<div class="formGrid">
+<div><label>Employee</label><select id="adminEmployee"></select></div>
+<div><label>Date</label><input id="adminDate" type="date"></div>
+<div>
+<label>Attendance Type</label>
+<select id="adminAttendanceType">
+<option value="P">Full Day (P)</option>
+<option value="H">Half Day (H)</option>
+</select>
+</div>
+</div>
+
+<label>OT Hours</label>
+<input id="adminOTHours" type="number" min="0" step="0.5" value="0" placeholder="OT Hours">
+<button id="adminMarkBtn" class="adminMarkBtn" type="button">MARK ATTENDANCE BY ADMIN</button>
+<div id="adminMarkMessage" class="message"></div>
+</div>
+
+<div class="panel adminSection" id="attendanceSection">
+<div class="sectionTop"><h3>📋 View Attendance</h3><button type="button" class="closeBtn sectionCloseBtn">✕ CLOSE / BACK TO DASHBOARD</button></div>
+<div class="monthBar"><div><label>Attendance Month</label><input id="attendanceViewMonth" type="month"></div><div><button type="button" class="adminMarkBtn" id="refreshAttendanceViewBtn">🔄 REFRESH</button></div></div>
+<p class="small">Attendance is shown date-wise. Serial number starts from 1 for every date and employees are ordered by Employee ID. Sunday and holidays are visible but cannot be marked by employees.</p>
+<div class="tableWrap"><table>
+<thead><tr><th>Serial</th><th>Date</th><th>Day</th><th>Employee ID</th><th>Name</th><th>Attendance</th><th>OT</th><th>Marked By</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="attendanceViewTable"></tbody></table></div>
+</div>
+
+<div class="panel adminSection" id="salarySection">
+<div class="sectionTop"><h3>📄 Salary PDF Reports</h3><button type="button" class="closeBtn sectionCloseBtn">✕ CLOSE / BACK TO DASHBOARD</button></div>
+<p class="small">Download any employee's month-wise salary PDF, or download one combined PDF containing all employees.</p>
+<div class="pdfTools">
+<div><label>Month</label><input id="adminPdfMonth" type="month"></div>
+<div><label>Employee</label><select id="adminPdfEmployee"></select></div>
+<button id="adminEmployeePdfBtn" class="pdfPrimary" type="button">EMPLOYEE PDF</button>
+</div>
+<button id="adminCombinedPdfBtn" class="pdfSecondary" type="button">DOWNLOAD COMBINED PDF — ALL EMPLOYEES</button>
+<div class="tableWrap" style="margin-top:15px"><table>
+<thead><tr><th>Employee ID</th><th>Name</th><th>Per Day</th><th>Present Days</th><th>Half Days</th><th>OT Hours</th><th>Monthly Salary</th><th>PDF</th></tr></thead>
+<tbody id="salaryPdfTable"></tbody></table></div>
+</div>
+
+<div class="panel adminSection" id="salarySummarySection">
+<div class="sectionTop"><h3>👥 Employee Salary Summary</h3><button type="button" class="closeBtn sectionCloseBtn">✕ CLOSE / BACK TO DASHBOARD</button></div>
+<div class="monthBar"><div><label>Salary Month</label><input id="salarySummaryMonth" type="month"></div><div><button type="button" class="adminMarkBtn" id="refreshSalarySummaryBtn">🔄 REFRESH</button></div></div>
+<div class="tableWrap"><table>
+<thead><tr><th>Serial</th><th>Employee ID</th><th>Name</th><th>Per Day</th><th>Full Days</th><th>Half Days</th><th>OT Hours</th><th>OT Wage</th><th>Monthly Wage</th></tr></thead>
+<tbody id="employeeSummary"></tbody></table></div>
+</div>
+
+<div class="panel adminSection" id="adminSettingsSection">
+<div class="sectionTop"><h3>🔐 Admin Account Settings</h3><button type="button" class="closeBtn sectionCloseBtn">✕ CLOSE / BACK TO DASHBOARD</button></div>
+<p class="small">Change the Admin username and password. Current password is verified through Firebase Authentication.</p>
+<div class="formGrid">
+<div><label>Current Username</label><input id="adminCurrentUsername" readonly></div>
+<div><label>New Username</label><input id="adminNewUsername" placeholder="ADMIN"></div>
+<div><label>Current Password</label><input id="adminCurrentPassword" type="password" placeholder="Current password"></div>
+</div>
+<div class="formGrid"><div><label>New Password</label><input id="adminNewPassword" type="password" placeholder="Minimum 6 characters"></div><div><label>Confirm New Password</label><input id="adminConfirmPassword" type="password" placeholder="Repeat new password"></div><div></div></div>
+<button id="changeAdminAccountBtn" class="adminMarkBtn" type="button">CHANGE ADMIN LOGIN DETAILS</button>
+<div id="adminAccountMessage" class="message"></div>
+</div>
+
+<div class="panel adminSection" id="holidaySection">
+<div class="sectionTop"><h3>🎉 Sunday & Holiday Management</h3><button type="button" class="closeBtn sectionCloseBtn">✕ CLOSE / BACK TO DASHBOARD</button></div>
+<p class="small">Employees can see Sundays/holidays but cannot mark attendance on them. Admin can mark P/H/OT on any Sunday or holiday using Admin Mark Attendance.</p>
+<div class="formGrid"><div><label>Holiday Date</label><input id="holidayDate" type="date"></div><div><label>Holiday Name</label><input id="holidayName" placeholder="Gandhi Jayanti"></div><div><button id="addHolidayBtn" class="adminMarkBtn" type="button">ADD HOLIDAY</button></div></div>
+<div id="holidayMessage" class="message"></div>
+<div class="tableWrap"><table><thead><tr><th>Date</th><th>Day</th><th>Holiday</th><th>Action</th></tr></thead><tbody id="holidayTable"></tbody></table></div>
+</div>
+
+<div class="footer">Last Updated: <span id="adminLastUpdated">-</span></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+const seedEmployees=[
+{id:"EMP001",name:"VIKRAM",wage:600},{id:"EMP002",name:"VISHAL KUMAR",wage:600},
+{id:"EMP003",name:"VICKY KUMAR",wage:550},{id:"EMP004",name:"SAHIL KUMAR",wage:550},
+{id:"EMP005",name:"AMAN KUMAR",wage:470},{id:"EMP006",name:"GURDEEP SINGH",wage:520},
+{id:"EMP007",name:"GIRDHARI LAL",wage:470},{id:"EMP008",name:"UTTAM KUMAR",wage:450},
+{id:"EMP009",name:"OM PRAKASH",wage:450},{id:"EMP010",name:"RAHUL KUMAR",wage:700},
+{id:"EMP011",name:"RAKESH SINGH",wage:430},{id:"EMP012",name:"RAKESH SHARMA",wage:480},
+{id:"EMP013",name:"VIJAY",wage:430},{id:"EMP014",name:"SUDESH SINGH",wage:450},
+{id:"EMP015",name:"GOKUL",wage:460},{id:"EMP016",name:"VARUN",wage:450}
+];
+
+let employees=[];
+const ADMIN_EMAIL="admin@employeelogin.com";
+const ADMIN_PASSWORD="Admin@1234";
+const LAST_UPDATED_KEY="employee_attendance_last_updated";
+const VISITOR_KEY="employee_attendance_visitors";
+const EMP_COLLECTION="Employees";
+let attendanceUnsubscribe=null;
+let realtimeAttendanceRecords=[];
+
+function firebaseReady(){return !!(window.firebaseAuth&&window.firebaseDB&&window.firebaseFns);}
+function employeeEmail(id){return id.toLowerCase()+"@gmail.com";}
+function showMessage(id,text,type){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.className="message "+type;el.style.display="block";}
+function clearMessage(id){const el=document.getElementById(id);if(!el)return;el.textContent="";el.style.display="none";}
+function safe(v){return String(v==null?"":v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+function statusBadge(status){const cls=status==="Approved"?"approved":status==="Rejected"?"rejected":"pending";return '<span class="badge '+cls+'">'+safe(status)+'</span>';}
+function attendanceBadge(type){return type==="H"?'<span class="badge halfBadge">HALF DAY</span>':'<span class="badge fullBadge">FULL DAY</span>';}
+
+async function loadEmployees(){
+  const {collection,getDocs}=window.firebaseFns;
+  const snap=await getDocs(collection(window.firebaseDB,EMP_COLLECTION));
+  employees=snap.docs.map(d=>{
+    const x=d.data();
+    return {id:String(x.id||x.employeeId||d.id).toUpperCase(),name:String(x.name||x.Name||""),wage:Number(x.wage||x.Wage||0),email:x.email||employeeEmail(String(x.id||x.employeeId||d.id)),active:x.active!==false};
+  }).filter(x=>x.id&&x.name);
+
+  // Normalize existing employee documents so the new login/rules work with older data.
+  for(const e of employees){
+    await window.firebaseFns.setDoc(window.firebaseFns.doc(window.firebaseDB,EMP_COLLECTION,e.id),{id:e.id,name:e.name,wage:e.wage,email:e.email,active:e.active},{merge:true});
+  }
+
+  // One-time migration/seed: only missing employees are added to Firestore.
+  const existing=new Set(employees.map(e=>e.id));
+  if(!employees.length){
+    for(const e of seedEmployees){
+      await window.firebaseFns.setDoc(window.firebaseFns.doc(window.firebaseDB,EMP_COLLECTION,e.id),{
+        id:e.id,name:e.name,wage:e.wage,email:employeeEmail(e.id),active:true,createdAt:window.firebaseFns.serverTimestamp()
+      });
+    }
+    const snap2=await getDocs(collection(window.firebaseDB,EMP_COLLECTION));
+    employees=snap2.docs.map(d=>{const x=d.data();return {id:String(x.id||d.id).toUpperCase(),name:String(x.name||""),wage:Number(x.wage||0),email:x.email||employeeEmail(d.id),active:x.active!==false};}).filter(x=>x.id&&x.name);
+  } else {
+    for(const e of seedEmployees){
+      if(!existing.has(e.id)){
+        await window.firebaseFns.setDoc(window.firebaseFns.doc(window.firebaseDB,EMP_COLLECTION,e.id),{...e,email:employeeEmail(e.id),active:true,createdAt:window.firebaseFns.serverTimestamp()});
+        employees.push({...e,email:employeeEmail(e.id),active:true});
+      }
+    }
+  }
+  employees.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  return employees;
+}
+
+async function getEmployee(id){
+  const {getDoc,doc,collection,getDocs,query,where}=window.firebaseFns;
+  const wanted=String(id||"").trim().toUpperCase();
+  const emailWanted=employeeEmail(wanted);
+  const collectionNames=[EMP_COLLECTION,"employees"];
+
+  // Check both possible employee collections. This handles duplicate/older
+  // collections such as Employees and employees without breaking login.
+  for(const colName of collectionNames){
+    try{
+      let snap=await getDoc(doc(window.firebaseDB,colName,wanted));
+      if(snap.exists()){
+        const x=snap.data();
+        const foundId=String(x.id||x.employeeId||x.EmployeeId||wanted).toUpperCase();
+        const foundEmail=x.email||x.Email||emailWanted;
+        return {id:foundId,name:String(x.name||x.Name||""),wage:Number(x.wage??x.Wage??0),email:foundEmail,active:x.active===undefined?true:x.active===true};
+      }
+
+      const queries=[
+        ["id",wanted],
+        ["employeeId",wanted],
+        ["EmployeeId",wanted],
+        ["email",emailWanted],
+        ["Email",emailWanted]
+      ];
+      for(const [field,value] of queries){
+        const qs=await getDocs(query(collection(window.firebaseDB,colName),where(field,"==",value)));
+        if(!qs.empty){
+          const d=qs.docs[0],x=d.data();
+          const foundId=String(x.id||x.employeeId||x.EmployeeId||d.id).toUpperCase();
+          const foundEmail=x.email||x.Email||emailWanted;
+          return {id:foundId,name:String(x.name||x.Name||""),wage:Number(x.wage??x.Wage??0),email:foundEmail,active:x.active===undefined?true:x.active===true};
+        }
+      }
+    }catch(err){
+      console.warn("Employee lookup skipped for collection",colName,err);
+    }
+  }
+  return null;
+}
+
+async function getRecords(){
+  // When the realtime listener is active, use its latest Firestore snapshot.
+  if(attendanceUnsubscribe && Array.isArray(realtimeAttendanceRecords)){
+    const role=sessionStorage.getItem("loginRole");
+    if(role==="employee"){
+      const email=(await getEmployee(sessionStorage.getItem("employeeId"))||{}).email;
+      return realtimeAttendanceRecords.filter(r=>r.employeeEmail===email);
+    }
+    return [...realtimeAttendanceRecords];
+  }
+
+  const {collection,getDocs,query,where}=window.firebaseFns;
+  const role=sessionStorage.getItem("loginRole");
+  let snap;
+  if(role==="employee"){
+    const id=sessionStorage.getItem("employeeId");
+    const e=employees.find(x=>x.id===id)||await getEmployee(id);
+    if(!e)return [];
+    snap=await getDocs(query(collection(window.firebaseDB,"attendance"),where("employeeEmail","==",e.email)));
+  }else{
+    snap=await getDocs(collection(window.firebaseDB,"attendance"));
+  }
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
+function stopAttendanceListener(){
+  if(typeof attendanceUnsubscribe==="function"){
+    attendanceUnsubscribe();
+  }
+  attendanceUnsubscribe=null;
+  realtimeAttendanceRecords=[];
+}
+
+function startAttendanceListener(){
+  stopAttendanceListener();
+  if(!firebaseReady()) return;
+
+  const {collection,onSnapshot,query,where}=window.firebaseFns;
+  const role=sessionStorage.getItem("loginRole");
+
+  let targetQuery;
+  if(role==="employee"){
+    const id=sessionStorage.getItem("employeeId");
+    const e=employees.find(x=>x.id===id);
+    if(!e) return;
+    targetQuery=query(
+      collection(window.firebaseDB,"attendance"),
+      where("employeeEmail","==",e.email)
+    );
+  }else if(role==="admin"){
+    targetQuery=collection(window.firebaseDB,"attendance");
+  }else{
+    return;
+  }
+
+  attendanceUnsubscribe=onSnapshot(
+    targetQuery,
+    async (snap)=>{
+      realtimeAttendanceRecords=snap.docs.map(d=>({id:d.id,...d.data()}));
+      localStorage.setItem(LAST_UPDATED_KEY,new Date().toISOString());
+      updateLastUpdated();
+
+      if(role==="employee"){
+        await renderEmployeeData(realtimeAttendanceRecords);
+      }else if(role==="admin"){
+        await renderAdmin(realtimeAttendanceRecords);
+      }
+    },
+    (error)=>{
+      console.error("Realtime attendance listener error:",error);
+      const messageId=role==="admin"?"adminMarkMessage":"employeeMessage";
+      showMessage(messageId,"Realtime Firebase update failed. Please check Firestore Rules.","error");
+    }
+  );
+}
+
+async function addRecord(record){const {collection,addDoc,serverTimestamp}=window.firebaseFns;return addDoc(collection(window.firebaseDB,"attendance"),{...record,createdAt:serverTimestamp()});}
+async function saveRecordStatus(id,status){const {doc,updateDoc}=window.firebaseFns;await updateDoc(doc(window.firebaseDB,"attendance",String(id)),{status});}
+async function removeRecord(id){const {doc,deleteDoc}=window.firebaseFns;await deleteDoc(doc(window.firebaseDB,"attendance",String(id)));}
+function formatDate(d){return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();}
+function convertInputDate(v){const p=v.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+function updateClock(){const now=new Date();const t=now.toLocaleDateString("en-IN")+" "+now.toLocaleTimeString("en-IN");document.getElementById("siteDateTime").textContent=t;document.getElementById("currentDateTime").textContent=t;}
+function updateLastUpdated(){const last=localStorage.getItem(LAST_UPDATED_KEY)||new Date().toISOString();const t=new Date(last).toLocaleDateString("en-IN")+" "+new Date(last).toLocaleTimeString("en-IN");document.getElementById("employeeLastUpdated").textContent=t;document.getElementById("adminLastUpdated").textContent=t;}
+function updateVisitorCount(){let c=Number(localStorage.getItem(VISITOR_KEY))||0;c++;localStorage.setItem(VISITOR_KEY,String(c));document.getElementById("visitorCount").textContent=c;}
+function setAdminDate(){const d=new Date();document.getElementById("adminDate").value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fillEmployeeSelect(){
+const s=document.getElementById("adminEmployee");s.innerHTML="";
+const p=document.getElementById("adminPdfEmployee");if(p)p.innerHTML="";
+employees.filter(e=>e.active).forEach(e=>{
+ const o=document.createElement("option");o.value=e.id;o.textContent=e.id+" - "+e.name;s.appendChild(o);
+ if(p){const po=document.createElement("option");po.value=e.id;po.textContent=e.id+" - "+e.name;p.appendChild(po);}
+});
+}
+function updateEmployeeWagePreview(){const id=sessionStorage.getItem("employeeId");const e=employees.find(x=>x.id===id);if(!e)return;const type=document.getElementById("employeeAttendanceType").value;const ot=Number(document.getElementById("employeeOTHours").value)||0;const base=type==="H"?e.wage/2:e.wage;document.getElementById("employeeWagePreview").value="₹"+(base+ot*(e.wage/8)).toFixed(2);}
+
+async function login(){
+  clearMessage("loginMessage");
+  try{
+    if(!firebaseReady()){showMessage("loginMessage","Firebase is not loaded. Refresh the page.","error");return;}
+    const type=document.getElementById("loginType").value;
+    if(type==="employee"){
+      const id=document.getElementById("employeeId").value.trim().toUpperCase();
+      const password=document.getElementById("employeePassword").value;
+      if(!/^EMP\d+$/.test(id)){showMessage("loginMessage","Enter a valid Employee ID.","error");return;}
+      const email=employeeEmail(id);
+      await window.firebaseFns.signInWithEmailAndPassword(window.firebaseAuth,email,password);
+      const e=await getEmployee(id);
+      if(!e||!e.active){await window.firebaseFns.signOut(window.firebaseAuth);showMessage("loginMessage","This employee account is inactive or not registered.","error");return;}
+      employees=[...employees.filter(x=>x.id!==e.id),e].sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+      sessionStorage.setItem("loginRole","employee");sessionStorage.setItem("employeeId",e.id);sessionStorage.setItem("employeeName",e.name);await showEmployeeDashboard();return;
+    }
+    const username=document.getElementById("adminUsername").value.trim().toUpperCase();
+    const password=document.getElementById("adminPassword").value;
+    const configuredAdminUsername=await getAdminSettings();
+    if(username!==configuredAdminUsername){showMessage("loginMessage","Invalid Admin Username or Password.","error");return;}
+    await window.firebaseFns.signInWithEmailAndPassword(window.firebaseAuth,ADMIN_EMAIL,password);
+    sessionStorage.setItem("loginRole","admin");await showAdminDashboard();
+  }catch(error){console.error(error);showMessage("loginMessage",typeOfLoginError(error),"error");}
+}
+function typeOfLoginError(error){return error&&error.code==="auth/invalid-credential"?"Invalid Username or Password.":"Invalid Employee ID or Password.";}
+
+async function showEmployeeDashboard(){
+  document.getElementById("loginScreen").style.display="none";document.getElementById("adminDashboard").style.display="none";document.getElementById("employeeDashboard").style.display="block";
+  const id=sessionStorage.getItem("employeeId");const e=await getEmployee(id);if(!e){await logout();return;}
+  employees=[...employees.filter(x=>x.id!==e.id),e];
+  document.getElementById("empIdDisplay").textContent=e.id;document.getElementById("employeeNameDisplay").textContent=e.name;document.getElementById("employeeWelcome").textContent="Welcome, "+e.name;document.getElementById("empDailyWage").textContent="₹"+e.wage;updateEmployeeWagePreview();await renderEmployeeData();await updateEmployeeDayNotice();startAttendanceListener();updateLastUpdated();
+}
+
+function localISODate(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+async function updateEmployeeDayNotice(){
+  const el=document.getElementById("employeeDayNotice"),btn=document.getElementById("markAttendanceBtn"); if(!el||!btn)return;
+  const d=new Date(),iso=localISODate(d); const hs=await getHolidays(); const h=hs.find(x=>x.date===iso);
+  if(d.getDay()===0){el.innerHTML='<span class="badge sundayBadge">SUNDAY</span> Attendance can be marked only by Admin.';btn.disabled=true;btn.style.opacity=".55";return;}
+  if(h){el.innerHTML='<span class="badge holidayBadge">HOLIDAY: '+safe(h.name)+'</span> Attendance can be marked only by Admin.';btn.disabled=true;btn.style.opacity=".55";return;}
+  el.textContent="";btn.disabled=false;btn.style.opacity="1";
+}
+async function markAttendance(){
+  const id=sessionStorage.getItem("employeeId");const e=await getEmployee(id);if(!e||!e.active){showMessage("employeeMessage","Please login again.","error");return;}
+  const type=document.getElementById("employeeAttendanceType").value;const ot=Number(document.getElementById("employeeOTHours").value)||0;if(new Date().getDay()===0){showMessage("employeeMessage","Sunday: attendance can only be marked by Admin.","error");return;}const hs=await getHolidays();const todayIso=localISODate();if(hs.some(h=>h.date===todayIso)){showMessage("employeeMessage","Today is a holiday: attendance can only be marked by Admin.","error");return;}if(ot<0){showMessage("employeeMessage","OT hours cannot be negative.","error");return;}
+  try{const records=await getRecords();const date=formatDate(new Date());if(records.some(r=>r.employeeId===id&&r.date===date)){showMessage("employeeMessage","Attendance already exists for today.","error");return;}await addRecord({employeeId:e.id,employeeName:e.name,employeeEmail:e.email,date,time:new Date().toLocaleTimeString("en-IN"),type,otHours:ot,markedBy:"Employee",status:"Pending"});localStorage.setItem(LAST_UPDATED_KEY,new Date().toISOString());showMessage("employeeMessage","Attendance submitted. Waiting for Admin approval.","success");updateLastUpdated();}catch(error){console.error(error);showMessage("employeeMessage","Attendance could not be saved to Firebase.","error");}
+}
+
+async function renderEmployeeData(recordsOverride=null){
+  const id=sessionStorage.getItem("employeeId");const e=await getEmployee(id);if(!e)return;const mine=recordsOverride?recordsOverride.filter(r=>r.employeeEmail===e.email):await getRecords();const approved=mine.filter(r=>r.status==="Approved");const pending=mine.filter(r=>r.status==="Pending");const full=approved.filter(r=>(r.type||"P")==="P").length;const half=approved.filter(r=>r.type==="H").length;const ot=approved.reduce((s,r)=>s+(Number(r.otHours)||0),0);const otWage=ot*(e.wage/8);const monthly=full*e.wage+half*e.wage/2+otWage;document.getElementById("fullDays").textContent=full;document.getElementById("halfDays").textContent=half;document.getElementById("pendingDays").textContent=pending.length;document.getElementById("empOTHours").textContent=ot.toFixed(2);document.getElementById("empOTWage").textContent="₹"+otWage.toFixed(2);document.getElementById("empMonthlyWage").textContent="₹"+monthly.toFixed(2);const tbody=document.getElementById("employeeHistory");tbody.innerHTML="";if(!mine.length){tbody.innerHTML='<tr><td colspan="7">No attendance records yet.</td></tr>';return;}mine.slice().reverse().forEach(r=>{const row=document.createElement("tr");const rh=Number(r.otHours)||0;row.innerHTML="<td>"+safe(r.date)+"</td><td>"+safe(r.time)+"</td><td>"+attendanceBadge(r.type||"P")+"</td><td>"+rh.toFixed(2)+"</td><td>₹"+(rh*(e.wage/8)).toFixed(2)+"</td><td>"+safe(r.markedBy)+"</td><td>"+statusBadge(r.status)+"</td>";tbody.appendChild(row);});
+}
+
+async function showAdminDashboard(){
+  document.getElementById("loginScreen").style.display="none";document.getElementById("employeeDashboard").style.display="none";document.getElementById("adminDashboard").style.display="block";setAdminDate();await loadEmployees();fillEmployeeSelect();await renderEmployeeManagement();await renderAdmin();await initAdminSettings();await renderHolidays();setPdfMonthDefaults();startAttendanceListener();updateLastUpdated();
+}
+
+async function adminMarkAttendance(){
+  const id=document.getElementById("adminEmployee").value;const dateInput=document.getElementById("adminDate").value;const type=document.getElementById("adminAttendanceType").value;const ot=Number(document.getElementById("adminOTHours").value)||0;if(!dateInput){showMessage("adminMarkMessage","Please select a date.","error");return;}const e=employees.find(x=>x.id===id);if(!e){showMessage("adminMarkMessage","Employee not found.","error");return;}try{const records=await getRecords();const date=convertInputDate(dateInput);if(records.some(r=>r.employeeId===id&&r.date===date)){showMessage("adminMarkMessage","Attendance already exists for this employee on this date.","error");return;}await addRecord({employeeId:e.id,employeeName:e.name,employeeEmail:e.email,date,time:new Date().toLocaleTimeString("en-IN"),type,otHours:ot,markedBy:"Admin",status:"Approved"});localStorage.setItem(LAST_UPDATED_KEY,new Date().toISOString());showMessage("adminMarkMessage","Attendance marked by Admin successfully.","success");await renderAdmin();updateLastUpdated();}catch(error){console.error(error);showMessage("adminMarkMessage","Admin attendance could not be saved to Firebase.","error");}
+}
+
+async function renderAdmin(recordsOverride=null){const records=recordsOverride||await getRecords();document.getElementById("totalRequests").textContent=records.length;document.getElementById("totalPending").textContent=records.filter(r=>r.status==="Pending").length;document.getElementById("totalApproved").textContent=records.filter(r=>r.status==="Approved").length;document.getElementById("totalRejected").textContent=records.filter(r=>r.status==="Rejected").length;renderAdminTable(records);renderSummary(records,document.getElementById("salarySummaryMonth")?.value||currentMonthValue());renderAttendanceView();const m=document.getElementById("adminPdfMonth")?.value||currentMonthValue();renderSalaryPdfTable(m,records);setPdfMonthDefaults();}
+function renderAdminTable(records){const tbody=document.getElementById("adminTable");tbody.innerHTML="";if(!records.length){tbody.innerHTML='<tr><td colspan="8">No attendance records.</td></tr>';return;}records.slice().reverse().forEach(r=>{const row=document.createElement("tr");let action="";if(r.status==="Pending"){action+='<button class="approveBtn" type="button" data-action="approve" data-id="'+safe(r.id)+'">APPROVE</button><button class="rejectBtn" type="button" data-action="reject" data-id="'+safe(r.id)+'">REJECT</button>';}action+='<button class="removeBtn" type="button" data-action="remove" data-id="'+safe(r.id)+'">REMOVE</button>';row.innerHTML="<td>"+safe(r.employeeId)+"</td><td>"+safe(r.employeeName)+"</td><td>"+safe(r.date)+"</td><td>"+attendanceBadge(r.type||"P")+"</td><td>"+(Number(r.otHours)||0).toFixed(2)+"</td><td>"+safe(r.markedBy)+"</td><td>"+statusBadge(r.status)+"</td><td>"+action+"</td>";tbody.appendChild(row);});}
+function renderSummary(records,month){const tbody=document.getElementById("employeeSummary");tbody.innerHTML="";const useMonth=month||document.getElementById("salarySummaryMonth")?.value||currentMonthValue();const monthData=monthRecords(records,useMonth);employees.slice().sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true})).forEach((e,idx)=>{const approved=monthData.filter(r=>r.employeeId===e.id&&r.status==="Approved");const full=approved.filter(r=>(r.type||"P")==="P").length;const half=approved.filter(r=>r.type==="H").length;const ot=approved.reduce((s,r)=>s+(Number(r.otHours)||0),0);const otWage=ot*(e.wage/8);const monthly=full*e.wage+half*e.wage/2+otWage;const row=document.createElement("tr");row.innerHTML="<td>"+(idx+1)+"</td><td>"+safe(e.id)+"</td><td>"+safe(e.name)+"</td><td>₹"+e.wage+"</td><td>"+full+"</td><td>"+half+"</td><td>"+ot.toFixed(2)+"</td><td>₹"+otWage.toFixed(2)+"</td><td><b>₹"+monthly.toFixed(2)+"</b></td>";tbody.appendChild(row);});}
+
+async function updateStatus(id,status){try{await saveRecordStatus(id,status);localStorage.setItem(LAST_UPDATED_KEY,new Date().toISOString());updateLastUpdated();}catch(error){console.error(error);showMessage("adminMarkMessage","Could not update attendance status in Firebase.","error");}}
+async function removeAttendance(id){if(!confirm("Are you sure you want to REMOVE this attendance record?"))return;try{await removeRecord(id);localStorage.setItem(LAST_UPDATED_KEY,new Date().toISOString());updateLastUpdated();}catch(error){console.error(error);showMessage("adminMarkMessage","Could not remove attendance record from Firebase.","error");}}
+
+async function renderEmployeeManagement(){
+  const tbody=document.getElementById("employeeManagementTable");tbody.innerHTML="";
+  employees.forEach(e=>{const row=document.createElement("tr");const action=e.active
+?'<button class="removeBtn" type="button" data-emp-action="deactivate" data-emp-id="'+safe(e.id)+'">DEACTIVATE</button> <button class="manageBtn" type="button" data-emp-action="reset-password" data-emp-id="'+safe(e.id)+'">RESET PASSWORD</button> <button class="rejectBtn" type="button" data-emp-action="delete" data-emp-id="'+safe(e.id)+'">DELETE</button>'
+:'<button class="activateBtn" type="button" data-emp-action="activate" data-emp-id="'+safe(e.id)+'">ACTIVATE</button> <button class="manageBtn" type="button" data-emp-action="reset-password" data-emp-id="'+safe(e.id)+'">RESET PASSWORD</button> <button class="rejectBtn" type="button" data-emp-action="delete" data-emp-id="'+safe(e.id)+'">DELETE</button>';row.innerHTML="<td>"+(idx+1)+"</td><td>"+safe(e.id)+"</td><td>"+safe(e.name)+"</td><td>₹"+e.wage+"</td><td>"+safe(e.email)+"</td><td>"+(e.active?'<span class="badge approved">ACTIVE</span>':'<span class="badge rejected">INACTIVE</span>')+"</td><td>"+action+"</td>";tbody.appendChild(row);});
+}
+
+async function getAdminSettings(){
+  const {getDoc,doc}=window.firebaseFns;
+  try{
+    const snap=await getDoc(doc(window.firebaseDB,"AdminSettings","admin"));
+    if(snap.exists() && snap.data().username) return String(snap.data().username).trim().toUpperCase();
+  }catch(error){console.warn("Admin settings read failed; using default username.",error);}
+  return "ADMIN";
+}
+
+async function saveAdminUsername(username){
+  const {setDoc,doc}=window.firebaseFns;
+  await setDoc(doc(window.firebaseDB,"AdminSettings","admin"),{username,updatedAt:window.firebaseFns.serverTimestamp()},{merge:true});
+}
+
+async function resetEmployeePassword(id){
+  const e=employees.find(x=>x.id===id);
+  if(!e)return;
+  if(!confirm("Send a password reset link to "+e.email+"?"))return;
+  try{
+    await window.firebaseFns.sendPasswordResetEmail(window.firebaseAuth,e.email);
+    showMessage("employeeManageMessage","Password reset link sent to "+e.email,"success");
+  }catch(error){
+    console.error(error);
+    let msg="Could not send password reset email.";
+    if(error.code==="auth/user-not-found")msg="This employee login account does not exist in Firebase Authentication.";
+    showMessage("employeeManageMessage",msg,"error");
+  }
+}
+
+async function changeAdminAccount(){
+  clearMessage("adminAccountMessage");
+  const currentUsername=document.getElementById("adminCurrentUsername").value.trim().toUpperCase();
+  const newUsername=document.getElementById("adminNewUsername").value.trim().toUpperCase();
+  const currentPassword=document.getElementById("adminCurrentPassword").value;
+  const newPassword=document.getElementById("adminNewPassword").value;
+  const confirmPassword=document.getElementById("adminConfirmPassword").value;
+  if(!currentPassword){showMessage("adminAccountMessage","Enter your current password.","error");return;}
+  if(!newUsername){showMessage("adminAccountMessage","Enter a new username.","error");return;}
+  if(!/^[A-Z0-9_.-]{3,30}$/.test(newUsername)){showMessage("adminAccountMessage","Username must be 3-30 characters: letters, numbers, _, . or -","error");return;}
+  if(newPassword && newPassword.length<6){showMessage("adminAccountMessage","New password must be at least 6 characters.","error");return;}
+  if(newPassword!==confirmPassword){showMessage("adminAccountMessage","New passwords do not match.","error");return;}
+  try{
+    const user=window.firebaseAuth.currentUser;
+    if(!user){showMessage("adminAccountMessage","Please login again.","error");return;}
+    const credential=window.firebaseFns.EmailAuthProvider.credential(user.email,currentPassword);
+    await window.firebaseFns.reauthenticateWithCredential(user,credential);
+    if(newPassword) await window.firebaseFns.updatePassword(user,newPassword);
+    await saveAdminUsername(newUsername);
+    document.getElementById("adminCurrentUsername").value=newUsername;
+    document.getElementById("adminNewUsername").value=newUsername;
+    document.getElementById("adminCurrentPassword").value="";
+    document.getElementById("adminNewPassword").value="";
+    document.getElementById("adminConfirmPassword").value="";
+    showMessage("adminAccountMessage","Admin login details changed successfully.","success");
+  }catch(error){
+    console.error(error);
+    let msg="Could not change Admin login details.";
+    if(error.code==="auth/invalid-credential")msg="Current password is incorrect.";
+    if(error.code==="auth/requires-recent-login")msg="Please logout and login again, then change the password.";
+    if(error.code==="auth/weak-password")msg="New password is too weak.";
+    showMessage("adminAccountMessage",msg,"error");
+  }
+}
+
+function showAdminSection(section){
+  ["attendanceSection","salarySection","salarySummarySection","adminSettingsSection","holidaySection"].forEach(id=>document.getElementById(id)?.classList.remove("active"));
+  ["viewAttendanceBtn","viewSalaryBtn","adminSettingsBtn"].forEach(id=>document.getElementById(id)?.classList.remove("active"));
+  if(section==="dashboard")return;
+  if(section==="attendance"){document.getElementById("attendanceSection")?.classList.add("active");document.getElementById("viewAttendanceBtn")?.classList.add("active");}
+  if(section==="salary"){document.getElementById("salarySection")?.classList.add("active");document.getElementById("salarySummarySection")?.classList.add("active");document.getElementById("viewSalaryBtn")?.classList.add("active");}
+  if(section==="settings"){document.getElementById("adminSettingsSection")?.classList.add("active");document.getElementById("adminSettingsBtn")?.classList.add("active");}
+  if(section==="holiday"){document.getElementById("holidaySection")?.classList.add("active");document.getElementById("holidayBtn")?.classList.add("active");}
+}
+
+async function initAdminSettings(){
+  const username=await getAdminSettings();
+  document.getElementById("adminCurrentUsername").value=username;
+  document.getElementById("adminNewUsername").value=username;
+}
+
+async function addEmployee(){
+  clearMessage("employeeManageMessage");
+  const id=document.getElementById("newEmpId").value.trim().toUpperCase();const name=document.getElementById("newEmpName").value.trim().toUpperCase();const wage=Number(document.getElementById("newEmpWage").value);const password=document.getElementById("newEmpPassword").value;
+  if(!/^EMP\d+$/.test(id)){showMessage("employeeManageMessage","Employee ID must look like EMP017.","error");return;}
+  if(!name||!wage||wage<0){showMessage("employeeManageMessage","Enter Name and valid wage.","error");return;}
+  if(password.length<6){showMessage("employeeManageMessage","Password must be at least 6 characters.","error");return;}
+  if(employees.some(e=>e.id===id)){showMessage("employeeManageMessage","This Employee ID already exists.","error");return;}
+  const email=employeeEmail(id);
+  try{
+    await window.firebaseFns.createUserWithEmailAndPassword(window.firebaseFns.creatorAuth,email,password);
+    await window.firebaseFns.signOut(window.firebaseFns.creatorAuth);
+    await window.firebaseFns.setDoc(window.firebaseFns.doc(window.firebaseDB,EMP_COLLECTION,id),{id,name,wage,email,active:true,createdAt:window.firebaseFns.serverTimestamp()});
+    employees.push({id,name,wage,email,active:true});employees.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+    fillEmployeeSelect();await renderEmployeeManagement();await renderSummary(await getRecords());
+    document.getElementById("newEmpId").value="";document.getElementById("newEmpName").value="";document.getElementById("newEmpWage").value="";document.getElementById("newEmpPassword").value="";
+    showMessage("employeeManageMessage",id+" added successfully. Login email: "+email,"success");
+  }catch(error){console.error(error);let msg="Could not create employee.";if(error.code==="auth/email-already-in-use")msg="This login email already exists in Firebase Authentication.";if(error.code==="auth/invalid-email")msg="Generated employee email is invalid.";showMessage("employeeManageMessage",msg,"error");}
+}
+
+async function setEmployeeActive(id,active){try{await window.firebaseFns.updateDoc(window.firebaseFns.doc(window.firebaseDB,EMP_COLLECTION,id),{active});employees=employees.map(e=>e.id===id?{...e,active}:e);fillEmployeeSelect();await renderEmployeeManagement();showMessage("employeeManageMessage",id+(active?" activated.":" deactivated."),"success");}catch(error){console.error(error);showMessage("employeeManageMessage","Could not update employee status.","error");}}
+
+async function deleteEmployeeCompletely(id){
+  const e=employees.find(x=>x.id===id);
+  if(!e)return;
+  if(!confirm("DELETE "+e.id+" - "+e.name+" completely?\n\nThis removes the employee from the dashboard, Firestore profile and all attendance records.\nThe Firebase Authentication login account must be deleted separately from Firebase Console."))return;
+  try{
+    const {doc,deleteDoc,collection,getDocs,query,where}=window.firebaseFns;
+    await deleteDoc(doc(window.firebaseDB,EMP_COLLECTION,id));
+    const snap=await getDocs(query(collection(window.firebaseDB,"attendance"),where("employeeId","==",id)));
+    for(const d of snap.docs) await deleteDoc(doc(window.firebaseDB,"attendance",d.id));
+    employees=employees.filter(x=>x.id!==id);
+    fillEmployeeSelect();
+    await renderEmployeeManagement();
+    await renderAdmin();
+    showMessage("employeeManageMessage",e.id+" - "+e.name+" removed from dashboard and Firestore.","success");
+  }catch(error){
+    console.error(error);
+    showMessage("employeeManageMessage","Employee could not be deleted. Check Firestore Rules.","error");
+  }
+}
+
+
+async function getHolidays(){
+  try{const snap=await window.firebaseFns.getDocs(window.firebaseFns.collection(window.firebaseDB,"Holidays"));return snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.date).localeCompare(String(b.date)));}catch(e){console.error(e);return [];} 
+}
+async function addHoliday(){
+  const date=document.getElementById("holidayDate").value; const name=document.getElementById("holidayName").value.trim();
+  if(!date||!name){showMessage("holidayMessage","Enter holiday date and name.","error");return;}
+  try{await window.firebaseFns.setDoc(window.firebaseFns.doc(window.firebaseDB,"Holidays",date),{date,name,createdAt:window.firebaseFns.serverTimestamp()});document.getElementById("holidayDate").value="";document.getElementById("holidayName").value="";showMessage("holidayMessage","Holiday added successfully.","success");await renderHolidays();await renderAttendanceView();}catch(e){console.error(e);showMessage("holidayMessage","Could not save holiday.","error");}
+}
+async function removeHoliday(id){if(!confirm("Remove this holiday?"))return;try{await window.firebaseFns.deleteDoc(window.firebaseFns.doc(window.firebaseDB,"Holidays",id));await renderHolidays();await renderAttendanceView();}catch(e){console.error(e);}}
+async function renderHolidays(){const tbody=document.getElementById("holidayTable");if(!tbody)return;const hs=await getHolidays();tbody.innerHTML=hs.length?hs.map(h=>{const d=new Date(h.date+"T00:00:00");return `<tr><td>${safe(formatInputDate(h.date))}</td><td>${safe(d.toLocaleDateString("en-IN",{weekday:"long"}))}</td><td>${safe(h.name)}</td><td><button class="removeBtn" type="button" data-holiday-id="${safe(h.id)}">REMOVE</button></td></tr>`;}).join(""):"<tr><td colspan=4>No holidays added.</td></tr>";}
+function isSunday(date){const p=String(date).split("/");if(p.length!==3)return false;return new Date(Number(p[2]),Number(p[1])-1,Number(p[0])).getDay()===0;}
+async function holidayMap(){const hs=await getHolidays();return Object.fromEntries(hs.map(h=>[h.date,h.name]));}
+function toIsoDate(date){const [d,m,y]=String(date).split("/");return `${y}-${m}-${d}`;}
+async function renderAttendanceView(){
+ const tbody=document.getElementById("attendanceViewTable"); if(!tbody)return; const month=document.getElementById("attendanceViewMonth")?.value||currentMonthValue(); const records=await getRecords(); const holidays=await holidayMap(); const [year,mon]=month.split("-").map(Number); if(!year||!mon)return; const days=new Date(year,mon,0).getDate(); let html="";
+ for(let day=1;day<=days;day++){
+   const date=String(day).padStart(2,"0")+"/"+String(mon).padStart(2,"0")+"/"+year; const iso=year+"-"+String(mon).padStart(2,"0")+"-"+String(day).padStart(2,"0"); const sunday=isSunday(date); const holiday=holidays[iso];
+   let dayRecords=records.filter(r=>r.date===date).sort((a,b)=>String(a.employeeId).localeCompare(String(b.employeeId),undefined,{numeric:true}));
+   // One employee/date record: prefer Approved over Pending/Rejected.
+   const byEmp={}; dayRecords.forEach(r=>{if(!byEmp[r.employeeId]||r.status==="Approved")byEmp[r.employeeId]=r;}); dayRecords=Object.values(byEmp).sort((a,b)=>String(a.employeeId).localeCompare(String(b.employeeId),undefined,{numeric:true}));
+   if(sunday||holiday){html+=`<tr><td colspan="10"><b>${safe(date)}</b> — ${sunday?'<span class="badge sundayBadge">SUNDAY</span> ':''}${holiday?'<span class="badge holidayBadge">HOLIDAY: '+safe(holiday)+'</span>':''}</td></tr>`;}
+   dayRecords.forEach((r,i)=>{const action=r.status==="Pending"?`<button class="approveBtn" type="button" data-action="approve" data-id="${safe(r.id)}">APPROVE</button><button class="rejectBtn" type="button" data-action="reject" data-id="${safe(r.id)}">REJECT</button>`:""; html+=`<tr><td>${i+1}</td><td>${safe(r.date)}</td><td>${safe(new Date(Number(year),Number(mon)-1,day).toLocaleDateString("en-IN",{weekday:"short"}))}</td><td>${safe(r.employeeId)}</td><td>${safe(r.employeeName)}</td><td>${attendanceBadge(r.type||"P")}</td><td>${(Number(r.otHours)||0).toFixed(2)}</td><td>${safe(r.markedBy)}</td><td>${statusBadge(r.status)}</td><td>${action}<button class="removeBtn" type="button" data-action="remove" data-id="${safe(r.id)}">REMOVE</button></td></tr>`;});
+ }
+ if(!html)html='<tr><td colspan="10">No attendance records for this month.</td></tr>'; tbody.innerHTML=html;
+}
+function currentMonthValue(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function monthLabel(month){
+  const p=String(month||"").split("-");
+  if(p.length!==2)return month||"";
+  const d=new Date(Number(p[0]),Number(p[1])-1,1);
+  return d.toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+}
+function monthRecords(records,month){
+  return (records||[]).filter(r=>{
+    const parts=String(r.date||"").split("/");
+    if(parts.length!==3)return false;
+    const m=String(parts[1]).padStart(2,"0");
+    const y=parts[2];
+    return y+"-"+m===month;
+  });
+}
+function dayRowsForMonth(month, records, employee){
+  const employeeRecords=(records||[]).filter(r=>
+    String(r.employeeId||"").toUpperCase()===String(employee.id||"").toUpperCase() ||
+    String(r.employeeEmail||"").toLowerCase()===String(employee.email||"").toLowerCase()
+  );
+  const [year,mon]=String(month).split("-").map(Number);
+  if(!year||!mon)return [];
+  const days=new Date(year,mon,0).getDate();
+  const byDate={};
+  monthRecords(employeeRecords,month).forEach(r=>{
+    if(!byDate[r.date] || (r.status==="Approved" && byDate[r.date].status!=="Approved")) byDate[r.date]=r;
+  });
+  const rows=[];
+  for(let day=1;day<=days;day++){
+    const date=String(day).padStart(2,"0")+"/"+String(mon).padStart(2,"0")+"/"+year;
+    const r=byDate[date];
+    const ot=Number(r&&r.otHours)||0;
+    let attendance="Absent / No Record", status="—", daily=0, otWage=0;
+    if(r){
+      status=r.status||"Pending";
+      if(r.status==="Approved"){
+        attendance=(r.type||"P")==="H"?"Half Day (H)":"Present (P)";
+        daily=(r.type||"P")==="H"?employee.wage/2:employee.wage;
+        otWage=ot*(employee.wage/8);
+      }else if(r.status==="Pending"){
+        attendance=(r.type||"P")==="H"?"Half Day (H)":"Present (P)";
+      }else{
+        attendance=(r.type||"P")==="H"?"Half Day (H)":"Present (P)";
+      }
+    }
+    rows.push({date,attendance,ot,status,daily,otWage,total:daily+otWage});
+  }
+  return rows;
+}
+function employeeSalaryData(employee,month,records){
+  const rows=dayRowsForMonth(month,records,employee);
+  const approved=rows.filter(x=>x.status==="Approved");
+  const present=approved.filter(x=>x.attendance==="Present (P)").length;
+  const half=approved.filter(x=>x.attendance==="Half Day (H)").length;
+  const ot=approved.reduce((s,x)=>s+x.ot,0);
+  const otWage=approved.reduce((s,x)=>s+x.otWage,0);
+  const base=approved.reduce((s,x)=>s+x.daily,0);
+  return {rows,present,half,ot,otWage,base,monthly:base+otWage};
+}
+function pdfHeader(doc,title,subtitle){
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.text("EMPLOYEE ATTENDANCE SYSTEM",14,18);
+  doc.setFontSize(13);doc.text(title,14,27);
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.text(subtitle,14,34);
+  doc.line(14,38,196,38);
+}
+function downloadEmployeeSalaryPDF(employeeId,month,recordsOverride=null){
+  const employee=employees.find(e=>e.id===employeeId)||null;
+  if(!employee){alert("Employee not found.");return;}
+  if(!month){alert("Please select a month.");return;}
+  const records=recordsOverride||realtimeAttendanceRecords;
+  const data=employeeSalaryData(employee,month,records);
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  pdfHeader(doc,"MONTHLY SALARY & ATTENDANCE REPORT",monthLabel(month));
+  doc.setFontSize(10);doc.text("Employee ID: "+employee.id,14,47);
+  doc.text("Employee Name: "+employee.name,14,54);
+  doc.text("Per Day Wage: Rs. "+employee.wage.toFixed(2),14,61);
+  doc.text("Present Days: "+data.present+"    Half Days: "+data.half+"    OT Hours: "+data.ot.toFixed(2),14,68);
+  doc.autoTable({
+    startY:75,
+    head:[["Date","Attendance","OT Hours","Status","Day Wage","OT Wage","Payable"]],
+    body:data.rows.map(x=>[x.date,x.attendance,x.ot.toFixed(2),x.status,"Rs. "+x.daily.toFixed(2),"Rs. "+x.otWage.toFixed(2),"Rs. "+x.total.toFixed(2)]),
+    theme:"grid",styles:{fontSize:7,cellPadding:2},headStyles:{fontStyle:"bold"}
+  });
+  let y=(doc.lastAutoTable&&doc.lastAutoTable.finalY||75)+10;
+  if(y>270){doc.addPage();y=20;}
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("MONTHLY SALARY SUMMARY",14,y);
+  doc.setFont("helvetica","normal");doc.setFontSize(10);
+  doc.text("Approved Present Days: "+data.present,14,y+8);
+  doc.text("Approved Half Days: "+data.half,14,y+15);
+  doc.text("Basic Attendance Wage: Rs. "+data.base.toFixed(2),14,y+22);
+  doc.text("OT Wage: Rs. "+data.otWage.toFixed(2),14,y+29);
+  doc.setFont("helvetica","bold");doc.text("TOTAL MONTHLY SALARY: Rs. "+data.monthly.toFixed(2),14,y+39);
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text("Generated: "+new Date().toLocaleString("en-IN"),14,287);
+  doc.save(employee.id+"_"+month+"_Salary_Report.pdf");
+}
+function renderSalaryPdfTable(month,records){
+  const tbody=document.getElementById("salaryPdfTable");if(!tbody)return;
+  tbody.innerHTML="";
+  employees.forEach(e=>{
+    const d=employeeSalaryData(e,month,records||[]);
+    const row=document.createElement("tr");
+    row.innerHTML="<td>"+(idx+1)+"</td><td>"+safe(e.id)+"</td><td>"+safe(e.name)+"</td><td>Rs. "+e.wage.toFixed(2)+"</td><td>"+d.present+"</td><td>"+d.half+"</td><td>"+d.ot.toFixed(2)+"</td><td><b>Rs. "+d.monthly.toFixed(2)+"</b></td><td><button class='pdfBtn' type='button' data-pdf-emp='"+safe(e.id)+"'>PDF</button></td>";
+    tbody.appendChild(row);
+  });
+}
+function downloadCombinedSalaryPDF(month,records){
+  if(!month){alert("Please select a month.");return;}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF("landscape");
+  pdfHeader(doc,"COMBINED MONTHLY SALARY REPORT",monthLabel(month));
+  doc.autoTable({
+    startY:43,
+    head:[["Employee ID","Employee Name","Per Day Wage","Present Days","Half Days","OT Hours","OT Wage","Monthly Salary"]],
+    body:employees.map(e=>{
+      const d=employeeSalaryData(e,month,records||[]);
+      return [e.id,e.name,"Rs. "+e.wage.toFixed(2),d.present,d.half,d.ot.toFixed(2),"Rs. "+d.otWage.toFixed(2),"Rs. "+d.monthly.toFixed(2)];
+    }),
+    theme:"grid",styles:{fontSize:8,cellPadding:3},headStyles:{fontStyle:"bold"}
+  });
+  let y=(doc.lastAutoTable&&doc.lastAutoTable.finalY||43)+12;
+  if(y>190){doc.addPage();y=20;}
+  const totalSalary=employees.reduce((s,e)=>s+employeeSalaryData(e,month,records||[]).monthly,0);
+  doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("TOTAL PAYROLL: Rs. "+totalSalary.toFixed(2),14,y);
+  doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text("Generated: "+new Date().toLocaleString("en-IN"),14,202);
+  doc.save("Combined_Salary_Report_"+month+".pdf");
+}
+function setPdfMonthDefaults(){
+  const m=currentMonthValue();
+  const a=document.getElementById("employeePdfMonth");if(a&&!a.value)a.value=m;
+  const b=document.getElementById("adminPdfMonth");if(b&&!b.value)b.value=m;const c=document.getElementById("attendanceViewMonth");if(c&&!c.value)c.value=m;const d=document.getElementById("salarySummaryMonth");if(d&&!d.value)d.value=m;
+}
+
+
+async function logout(){stopAttendanceListener();try{if(window.firebaseAuth&&window.firebaseAuth.currentUser)await window.firebaseFns.signOut(window.firebaseAuth);}catch(error){console.error(error);}sessionStorage.clear();document.getElementById("employeeDashboard").style.display="none";document.getElementById("adminDashboard").style.display="none";document.getElementById("loginScreen").style.display="flex";document.getElementById("employeeId").value="";document.getElementById("employeePassword").value="";document.getElementById("adminUsername").value="";document.getElementById("adminPassword").value="";clearMessage("loginMessage");}
+
+document.getElementById("loginType").addEventListener("change",function(){document.getElementById("employeeLogin").style.display=this.value==="employee"?"block":"none";document.getElementById("adminLogin").style.display=this.value==="admin"?"block":"none";});
+document.getElementById("loginBtn").addEventListener("click",login);document.getElementById("employeeLogout").addEventListener("click",logout);document.getElementById("adminLogout").addEventListener("click",logout);document.getElementById("markAttendanceBtn").addEventListener("click",markAttendance);document.getElementById("adminMarkBtn").addEventListener("click",adminMarkAttendance);document.getElementById("addEmployeeBtn").addEventListener("click",addEmployee);document.getElementById("changeAdminAccountBtn").addEventListener("click",changeAdminAccount);document.getElementById("employeeAttendanceType").addEventListener("change",updateEmployeeWagePreview);document.getElementById("employeeOTHours").addEventListener("input",updateEmployeeWagePreview);
+document.getElementById("employeePdfBtn").addEventListener("click",async function(){
+  const id=sessionStorage.getItem("employeeId"),month=document.getElementById("employeePdfMonth").value;
+  const records=await getRecords();downloadEmployeeSalaryPDF(id,month,records);
+});
+document.getElementById("adminEmployeePdfBtn").addEventListener("click",async function(){
+  const id=document.getElementById("adminPdfEmployee").value,month=document.getElementById("adminPdfMonth").value;
+  const records=await getRecords();downloadEmployeeSalaryPDF(id,month,records);
+});
+document.getElementById("adminCombinedPdfBtn").addEventListener("click",async function(){
+  const month=document.getElementById("adminPdfMonth").value,records=await getRecords();downloadCombinedSalaryPDF(month,records);
+});
+document.getElementById("adminPdfMonth").addEventListener("change",async function(){
+  const records=await getRecords();renderSalaryPdfTable(this.value,records);
+});
+document.getElementById("salaryPdfTable").addEventListener("click",async function(e){
+  const btn=e.target.closest("button[data-pdf-emp]");if(!btn)return;
+  const records=await getRecords();downloadEmployeeSalaryPDF(btn.getAttribute("data-pdf-emp"),document.getElementById("adminPdfMonth").value,records);
+});
+document.getElementById("adminTable").addEventListener("click",async function(e){const btn=e.target.closest("button");if(!btn)return;const id=btn.getAttribute("data-id");const action=btn.getAttribute("data-action");if(action==="approve")await updateStatus(id,"Approved");if(action==="reject")await updateStatus(id,"Rejected");if(action==="remove")await removeAttendance(id);});
+document.getElementById("employeeManagementTable").addEventListener("click",async function(e){const btn=e.target.closest("button");if(!btn)return;const id=btn.getAttribute("data-emp-id");const action=btn.getAttribute("data-emp-action");if(action==="deactivate"){if(confirm("Deactivate "+id+"? Existing attendance will remain safe."))await setEmployeeActive(id,false);}if(action==="activate")await setEmployeeActive(id,true);if(action==="delete")await deleteEmployeeCompletely(id);if(action==="reset-password")await resetEmployeePassword(id);});
+["employeeId","employeePassword","adminUsername","adminPassword"].forEach(id=>document.getElementById(id).addEventListener("keydown",function(e){if(e.key==="Enter")login();}));
+document.getElementById("viewAttendanceBtn").addEventListener("click",async()=>{showAdminSection("attendance");await renderAttendanceView();});document.getElementById("viewSalaryBtn").addEventListener("click",async()=>{showAdminSection("salary");showAdminSection("salary");});document.getElementById("adminSettingsBtn").addEventListener("click",async()=>{showAdminSection("settings");await initAdminSettings();});document.getElementById("holidayBtn").addEventListener("click",async()=>{showAdminSection("holiday");await renderHolidays();});document.getElementById("changeAdminAccountBtn").addEventListener("click",changeAdminAccount);document.getElementById("attendanceViewMonth").addEventListener("change",renderAttendanceView);document.getElementById("refreshAttendanceViewBtn").addEventListener("click",renderAttendanceView);document.getElementById("salarySummaryMonth").addEventListener("change",async()=>{renderSummary(await getRecords(),document.getElementById("salarySummaryMonth").value);});document.getElementById("refreshSalarySummaryBtn").addEventListener("click",async()=>{renderSummary(await getRecords(),document.getElementById("salarySummaryMonth").value);});document.getElementById("addHolidayBtn").addEventListener("click",addHoliday);document.getElementById("holidayTable").addEventListener("click",async e=>{const b=e.target.closest("button[data-holiday-id]");if(b)await removeHoliday(b.getAttribute("data-holiday-id"));});document.querySelectorAll(".sectionCloseBtn").forEach(b=>b.addEventListener("click",()=>showAdminSection("dashboard")));updateVisitorCount();updateClock();updateLastUpdated();setPdfMonthDefaults();setInterval(updateClock,1000);setInterval(updateEmployeeDayNotice,30000);
+setTimeout(async()=>{const role=sessionStorage.getItem("loginRole");if(!role||!window.firebaseAuth||!window.firebaseAuth.currentUser)return;if(role==="employee")await showEmployeeDashboard();if(role==="admin")await showAdminDashboard();},500);
+});
+</script>
+</body>
+</html>
